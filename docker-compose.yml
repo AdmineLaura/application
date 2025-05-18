@@ -1,0 +1,41 @@
+#comment
+
+services:
+  web:
+    image: laurasili/flask:latest
+    ports:
+      - 5000:5000
+    volumes:
+      - app-volume:/app
+    links:
+      - db
+  db:
+    image: mongo:4
+    hostname: mongodb
+    environment:
+      - MONGO_INITDB_DATABASE=task_db
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=MOTaBlortHIO
+    ports:
+      - 27017:27017
+    volumes:
+      - db-volume:/data/db
+
+  agent:
+    container_name: newrelic-infra
+    build:
+      context: .
+      dockerfile: newrelic-infra.dockerfile
+    cap_add:
+      - SYS_PTRACE
+    network_mode: host
+    pid: host
+    privileged: true
+    volumes:
+      - "/:/host:ro"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    restart: unless-stopped
+
+volumes:
+  db-volume:
+  app-volume:
