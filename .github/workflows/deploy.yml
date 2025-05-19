@@ -1,4 +1,4 @@
-name: App CD
+name: deploy
 
 on: # specify the build to trigger the automated ci/cd
     push:
