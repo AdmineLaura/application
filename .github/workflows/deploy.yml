@@ -40,7 +40,7 @@ jobs:
 
       - name: Generate newrelic.ini
         env:
-          NEW_RELIC_LICENSE_KEY: ${{ secrets.NEW_RELIC_LICENSE_KEY }}
+          NEW_RELIC_LICENSE_KEY: ${{ secrets.NEW_RELIC_LICENSE_KEY_INGEST }}
         run: |
           newrelic-admin generate-config "$NEW_RELIC_LICENSE_KEY" newrelic.ini
           sed -i 's/monitor_mode = false/monitor_mode = true/' newrelic.ini
