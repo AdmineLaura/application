@@ -8,6 +8,7 @@ WORKDIR /app
 COPY . /app
 
 # Install any needed dependencies specified in requirements.txt
+RUN apt update
 RUN apt install -y python3-pip
 RUN pip install --no-cache-dir -r requirements.txt
 RUN apt install curl -y
