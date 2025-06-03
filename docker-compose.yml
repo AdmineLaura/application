@@ -5,8 +5,8 @@ services:
     image: laurasili/flask:latest
     ports:
       - 5000:5000
-    volumes:
-      - app-volume:/app
+#    volumes:
+#      - app-volume:/app
     links:
       - db
   db:
@@ -38,4 +38,4 @@ services:
 
 volumes:
   db-volume:
-  app-volume:
+#  app-volume:
