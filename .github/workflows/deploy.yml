@@ -1,58 +1,73 @@
 name: deploy
 
-on: # specify the build to trigger the automated ci/cd
-    push:
-        branches:
-            - "main"
+on: # specify the build to trigger the automated CI/CD
+  push:
+    branches:
+      - "main"
+
 jobs:
 
   flake8-lint:
-    runs-on: ubuntu-latest
     name: Lint
+    runs-on: ubuntu-latest
     steps:
       - name: Check out source repository
         uses: actions/checkout@v3
+
       - name: Set up Python environment
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
+
       - name: flake8 Lint
         uses: py-actions/flake8@v2
         with:
           ignore: "F401"
           max-line-length: "120"
-        
+
   build:
-        name: Build Docker image
-        runs-on: ubuntu-latest # specify the build machine
-        needs: [flake8-lint]
-        if: ${{ needs.flake8-lint.result == 'success' }}
-          
-        steps:
-            - # checkout to the repository on the build machine
-                name: Checkout
-                uses: actions/checkout@v3
-            - # login to Docker Hub using the secrets provided
-                name: Login to Docker Hub
-                uses: docker/login-action@v2
-                with:
-                  username: ${{secrets.DOCKERHUB_USERNAME }} 
-                  password: ${{secrets.DOCKERHUB_TOKEN }}
-            - # create a build kit builder instance
-                name: Set up Docker Buildx
-                uses: docker/setup-buildx-action@v2
-            - # build the container image and push it to Docker \
-                # Hub with the name clockbox.
-                name: Build and push
-                uses: docker/build-push-action@v4
-                with:
-                  context: .
-                  push: true
-                  tags: laurasili/flask:latest
+    name: Build Docker image
+    runs-on: ubuntu-latest
+    needs: [flake8-lint]
+    if: ${{ needs.flake8-lint.result == 'success' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install New Relic agent CLI
+        run: pip install newrelic
+
+      - name: Generate newrelic.ini
+        env:
+          NEW_RELIC_LICENSE_KEY: ${{ secrets.NEW_RELIC_LICENSE_KEY }}
+        run: |
+          newrelic-admin generate-config "$NEW_RELIC_LICENSE_KEY" newrelic.ini
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: laurasili/flask:latest
+
   deploy:
+    name: Deploy to EC2
     runs-on: ubuntu-latest
     needs: [build]
     if: ${{ needs.build.result == 'success' }}
+
+    env:
+      REGISTRY: docker.io
 
     steps:
       - name: Checkout repository
@@ -64,10 +79,12 @@ jobs:
           echo "${{ secrets.EC2_HOST_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
       - name: Create license file from GitHub secret
         run: |
           echo "${{ secrets.NEW_RELIC_LICENSE_KEY }}" > newrelic-infra.yml
           echo "License file created."
+
       - name: Copy files via SCP
         run: |
           find . -maxdepth 1 ! -name '.*' -exec scp -r {} ubuntu@${{ secrets.EC2_HOST }}:/home/ubuntu/ \;
@@ -86,20 +103,17 @@ jobs:
             echo "--- Docker compose up ---"
             sudo docker compose up -d
 
-    env:
-      REGISTRY: docker.io
-
   check-flask:
+    name: Check if Flask App is Live
     runs-on: ubuntu-latest
     needs: [deploy]
     if: ${{ needs.deploy.result == 'success' }}
+
     steps:
       - name: Check if site works and contains text "Todo List"
         run: |
           URL="http://${{ secrets.EC2_HOST }}:5000"
-
           echo "Checking URL: $URL"
-
           if curl -s "$URL" | grep -q "Todo List"; then
             echo "Found text 'Todo List' — success."
           else
