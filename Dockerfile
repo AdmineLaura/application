@@ -1,14 +1,14 @@
 # Use an official Python runtime as a parent image
 FROM python:3.10-slim
 
+# Newrelic key environment file
+ENV NEW_RELIC_CONFIG_FILE=newrelic.ini
+
 # Set the working directory in the container
 WORKDIR /app
 
 # Copy the current directory contents into the container at /app
 COPY . /app
-
-# Newrelic key environment file
-ENV NEW_RELIC_CONFIG_FILE=newrelic.ini
 
 # Install any needed dependencies specified in requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
