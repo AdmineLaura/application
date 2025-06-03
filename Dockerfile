@@ -7,6 +7,9 @@ WORKDIR /app
 # Copy the current directory contents into the container at /app
 COPY . /app
 
+# Newrelic key environment file
+ENV NEW_RELIC_CONFIG_FILE=newrelic.ini
+
 # Install any needed dependencies specified in requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -14,4 +17,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 EXPOSE 5000
 
 # Run app.py when the container launches
+# CMD ["python3", "/app/app.py"]
 CMD ["newrelic-admin", "run-program", "python3", "/app/app.py"]
